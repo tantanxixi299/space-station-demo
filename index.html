@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🛰️ 天宫空间站·绕地轨道演示</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Comic Sans MS', 'Microsoft YaHei', sans-serif;
+    background: radial-gradient(ellipse at center, #0d1b3a 0%, #050816 70%);
+    min-height: 100vh; color: #fff; overflow-x: hidden;
+  }
+  .stars { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+  .star { position: absolute; background: #fff; border-radius: 50%; animation: tw 3s ease-in-out infinite; }
+  @keyframes tw { 0%,100%{opacity:.2;transform:scale(1)} 50%{opacity:1;transform:scale(1.5)} }
+
+  h1 { text-align:center; font-size:24px; padding:16px 10px 4px; text-shadow:0 0 14px rgba(100,180,255,.7); position:relative; z-index:1; }
+  h1 span { color:#6cf; font-size:30px; }
+  .sub { text-align:center; font-size:13px; color:#7a8; margin-bottom:10px; position:relative; z-index:1; }
+
+  .wrap { max-width:880px; margin:0 auto; padding:0 10px 28px; position:relative; z-index:1; }
+
+  .data-row { display:flex; gap:10px; justify-content:center; margin-bottom:14px; flex-wrap:wrap; }
+  .data-card { background:rgba(255,255,255,.08); border-radius:12px; padding:10px 16px; text-align:center; border:2px solid; backdrop-filter:blur(8px); min-width:110px; }
+  .data-card .dt{font-size:12px;color:#aabb} .data-card .dv{font-size:26px;font-weight:bold;margin:2px 0} .data-card .du{font-size:11px;color:#778}
+  .dc1{border-color:#4facfe} .dc1 .dv{color:#7af}
+  .dc2{border-color:#f093fb} .dc2 .dv{color:#f9a}
+  .dc3{border-color:#f7971e} .dc3 .dv{color:#fa7}
+
+  .q-tabs{display:flex;gap:10px;justify-content:center;margin-bottom:12px;flex-wrap:wrap}
+  .qtab{padding:11px 18px;border:none;border-radius:30px;font-size:14px;font-weight:bold;cursor:pointer;font-family:inherit;transition:.3s;opacity:.55}
+  .qtab:hover{transform:translateY(-2px);opacity:.85}
+  .qtab.active{opacity:1;transform:scale(1.05);box-shadow:0 0 18px currentColor}
+  .qt1{background:linear-gradient(135deg,#4facfe,#00f2fe);color:#003}
+  .qt2{background:linear-gradient(135deg,#f093fb,#f5576c);color:#fff}
+  .qt3{background:linear-gradient(135deg,#f7971e,#ffd200);color:#330}
+
+  .narration{background:rgba(0,0,0,.4);border-radius:12px;padding:12px 16px;margin-bottom:12px;min-height:54px;display:flex;align-items:center;gap:10px;font-size:17px;border-left:4px solid #6cf}
+  .narration .n-icon{font-size:26px} .narration .n-text{flex:1} .narration .n-text b{color:#6cf;font-size:21px}
+
+  .stage{background:radial-gradient(ellipse at center,#0a1530,#03050f);border-radius:18px;border:2px solid rgba(100,180,255,.15);height:480px;position:relative;overflow:hidden;margin-bottom:14px}
+  .stage svg{display:block;margin:0 auto;width:100%;height:100%;preserve-AspectRatio:xMidYMid meet}
+
+  /* 轨道过渡动画 */
+  .orbit-ring{transition:r 1.1s cubic-bezier(.34,1.56,.64,1), stroke .6s, stroke-opacity .6s}
+  .station-group{transition:transform 1.1s cubic-bezier(.34,1.56,.64,1)}
+  .orbit-label{transition:all 1.1s cubic-bezier(.34,1.56,.64,1);font-size:13px;font-weight:bold}
+
+  .formula-box{background:rgba(255,255,255,.07);border-radius:14px;padding:16px;border:2px solid rgba(108,204,255,.3)}
+  .fb-title{text-align:center;color:#6cf;font-size:16px;margin-bottom:10px}
+  .fline{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin:8px 0;opacity:0;transform:translateY(12px);transition:.5s}
+  .fline.show{opacity:1;transform:translateY(0)}
+  .fblock{padding:10px 16px;border-radius:10px;font-size:21px;font-weight:bold;min-width:66px;text-align:center;border:2px solid}
+  .fop{font-size:25px;color:#bbb} .feq{font-size:25px;color:#6cf}
+  .final-ans{background:linear-gradient(135deg,rgba(108,204,255,.22),rgba(255,140,0,.18));border:2px solid #6cf;border-radius:12px;padding:12px;margin-top:10px;text-align:center;font-size:21px;font-weight:bold;color:#6cf;opacity:0;transition:.6s}
+  .final-ans.show{opacity:1;animation:glow 2s infinite}
+  @keyframes glow{0%,100%{box-shadow:0 0 6px rgba(108,204,255,.3)}50%{box-shadow:0 0 22px rgba(108,204,255,.7)}}
+
+  /* 原题问题框 */
+  .question-box{
+    background:linear-gradient(135deg,rgba(255,255,255,0.1),rgba(108,204,255,0.08));
+    border-radius:14px; padding:14px 18px; margin-bottom:12px;
+    border:2px solid rgba(255,215,0,0.4); position:relative;
+    opacity:0; transform:translateY(-10px); transition:all 0.5s ease;
+  }
+  .question-box.show{opacity:1; transform:translateY(0);}
+  .question-box .q-tag{
+    display:inline-block; background:rgba(255,215,0,0.25); color:#ffd700;
+    font-size:13px; font-weight:bold; padding:3px 12px; border-radius:20px;
+    margin-bottom:8px;
+  }
+  .question-box .q-body{
+    font-size:17px; line-height:1.7; color:#fff;
+  }
+  .question-box .q-body .kn{ color:#6cf; font-weight:bold; font-size:19px; }
+  .question-box .q-body .kq{ color:#ffd700; font-weight:bold; }
+
+  .ctrl{display:flex;justify-content:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .btn{padding:11px 20px;border:none;border-radius:30px;font-size:15px;font-weight:bold;cursor:pointer;font-family:inherit;transition:.3s}
+  .btn:hover{transform:translateY(-2px);box-shadow:0 5px 16px rgba(0,0,0,.3)}
+  .btn-play{background:linear-gradient(135deg,#11998e,#38ef7d);color:#fff}
+  .btn-reset{background:#3a4a5a;color:#cde}
+
+  .blue-t{color:#7af} .pink-t{color:#f9a} .orange-t{color:#fa7} .gold-t{color:#6cf}
+  .blue-b{border-color:#4facfe;background:rgba(79,172,254,.15)}
+  .pink-b{border-color:#f093fb;background:rgba(240,147,251,.15)}
+  .orange-b{border-color:#f7971e;background:rgba(247,151,30,.15)}
+  .gold-b{border-color:#6cf;background:rgba(108,204,255,.15)}
+  .gray-b{border-color:#666;background:rgba(100,100,100,.2);color:#888}
+
+  @keyframes orbitSpin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+
+  @media(max-width:600px){
+    h1{font-size:19px;padding:12px 8px 4px} h1 span{font-size:24px}
+    .sub{margin-bottom:6px}
+    .wrap{padding:0 6px 20px}
+    /* 动画舞台：更高 + SVG 放大 */
+    .stage{height:470px;border-radius:14px;margin-bottom:10px}
+    .stage svg{transform:scale(1.12);transform-origin:center center}
+    /* 数据卡片更紧凑 */
+    .data-row{gap:7px;margin-bottom:10px}
+    .data-card{min-width:0;flex:1;padding:7px 6px} .data-card .dv{font-size:22px} .data-card .dt{font-size:11px} .data-card .du{font-size:10px}
+    /* 题目标签 */
+    .q-tabs{gap:7px;margin-bottom:9px}
+    .qtab{font-size:12px;padding:9px 11px}
+    /* 原题框紧凑 */
+    .question-box{padding:10px 12px;margin-bottom:9px}
+    .question-box .q-tag{font-size:12px;padding:2px 10px;margin-bottom:5px}
+    .question-box .q-body{font-size:15px;line-height:1.6}
+    .question-box .q-body .kn{font-size:17px}
+    /* 旁白紧凑 */
+    .narration{padding:10px 12px;margin-bottom:9px;min-height:48px;font-size:14px;gap:8px}
+    .narration .n-icon{font-size:22px} .narration .n-text b{font-size:17px}
+    /* 算式 */
+    .formula-box{padding:12px}
+    .fb-title{font-size:14px;margin-bottom:7px}
+    .fblock{font-size:17px;padding:8px 12px;min-width:54px}
+    .final-ans{font-size:18px;padding:10px}
+    /* 按钮 */
+    .btn{padding:10px 16px;font-size:14px}
+  }
+  @media(max-width:380px){
+    .stage{height:430px}
+    .stage svg{transform:scale(1.05)}
+  }
+</style>
+</head>
+<body>
+<div class="stars" id="stars"></div>
+<h1>🛰️ <span>天宫空间站</span> · 绕地轨道演示</h1>
+<p class="sub">空间站绕着地球飞，飞得越高 = 轨道半径越大 👇 点选题 → 播放动画</p>
+
+<div class="wrap">
+  <div class="data-row">
+    <div class="data-card dc1"><div class="dt">初始轨道</div><div class="dv">358</div><div class="du">千米</div></div>
+    <div class="data-card dc2"><div class="dt">上升调整</div><div class="dv">146</div><div class="du">千米</div></div>
+    <div class="data-card dc3"><div class="dt">稳定巡航</div><div class="dv">487</div><div class="du">千米</div></div>
+  </div>
+
+  <div class="q-tabs">
+    <button class="qtab qt1 active" onclick="selectQ(1)">❶ 358＋146</button>
+    <button class="qtab qt2" onclick="selectQ(2)">❷ 487−358</button>
+    <button class="qtab qt3" onclick="selectQ(3)">❸ 先降后升</button>
+  </div>
+
+  <!-- 原题问题 -->
+  <div class="question-box" id="questionBox">
+    <span class="q-tag" id="qTag">题目</span>
+    <div class="q-body" id="qBody"></div>
+  </div>
+
+  <div class="narration" id="narr">
+    <span class="n-icon">📣</span>
+    <span class="n-text" id="narrText">选好题目，点 <b>▶ 播放动画</b>，看空间站怎么变轨道！</span>
+  </div>
+
+  <div class="stage">
+    <svg id="svg" viewBox="0 0 600 480" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <radialGradient id="earthG" cx="40%" cy="38%">
+          <stop offset="0%" stop-color="#5fb3ff"/>
+          <stop offset="55%" stop-color="#2a7fd6"/>
+          <stop offset="100%" stop-color="#0a3a6e"/>
+        </radialGradient>
+        <radialGradient id="atmG" cx="50%" cy="50%">
+          <stop offset="78%" stop-color="rgba(100,180,255,0)"/>
+          <stop offset="92%" stop-color="rgba(100,180,255,0.25)"/>
+          <stop offset="100%" stop-color="rgba(100,180,255,0)"/>
+        </radialGradient>
+        <!-- 空间站图形定义（左右对称、上下对称，绕地旋转更美观） -->
+        <symbol id="station" viewBox="-30 -10 60 20" overflow="visible">
+          <!-- 太阳能板（左右两片） -->
+          <rect x="-28" y="-3" width="13" height="6" fill="#16365e" stroke="#4a9d7a" stroke-width="0.6"/>
+          <line x1="-28" y1="0" x2="-15" y2="0" stroke="#2a5a8a" stroke-width="0.4"/>
+          <rect x="15" y="-3" width="13" height="6" fill="#16365e" stroke="#4a9d7a" stroke-width="0.6"/>
+          <line x1="15" y1="0" x2="28" y2="0" stroke="#2a5a8a" stroke-width="0.4"/>
+          <!-- 连接杆 -->
+          <line x1="-15" y1="0" x2="-9" y2="0" stroke="#aab" stroke-width="1.4"/>
+          <line x1="9" y1="0" x2="15" y2="0" stroke="#aab" stroke-width="1.4"/>
+          <!-- 主舱体（核心舱） -->
+          <rect x="-9" y="-3.5" width="18" height="7" rx="2.5" fill="#e0e5ee" stroke="#889" stroke-width="0.7"/>
+          <rect x="-2" y="-3.5" width="4" height="7" fill="#bcc4d0"/>
+          <circle cx="0" cy="0" r="1.4" fill="#ffd255"/>
+          <circle cx="-5" cy="0" r="0.9" fill="#88a"/>
+          <circle cx="5" cy="0" r="0.9" fill="#88a"/>
+        </symbol>
+        <marker id="arrowM" markerWidth="9" markerHeight="9" refX="6" refY="4.5" orient="auto">
+          <path d="M0,1 L6,4.5 L0,8" fill="currentColor"/>
+        </marker>
+      </defs>
+
+      <!-- 大气层光晕 -->
+      <circle cx="300" cy="240" r="80" fill="url(#atmG)"/>
+
+      <!-- 轨道圆环（动态） -->
+      <circle id="orbit1" class="orbit-ring" cx="300" cy="240" r="0" fill="none" stroke="#4facfe" stroke-width="2" stroke-dasharray="5 4" stroke-opacity="0"/>
+      <circle id="orbit2" class="orbit-ring" cx="300" cy="240" r="0" fill="none" stroke="#f093fb" stroke-width="2" stroke-dasharray="5 4" stroke-opacity="0"/>
+      <circle id="orbit3" class="orbit-ring" cx="300" cy="240" r="0" fill="none" stroke="#f7971e" stroke-width="2" stroke-dasharray="5 4" stroke-opacity="0"/>
+      <circle id="orbit4" class="orbit-ring" cx="300" cy="240" r="0" fill="none" stroke="#6cf" stroke-width="2" stroke-dasharray="5 4" stroke-opacity="0"/>
+
+      <!-- 高度标注线 + 文字 -->
+      <g id="labelGroup"></g>
+
+      <!-- 地球 -->
+      <circle cx="300" cy="240" r="62" fill="url(#earthG)"/>
+      <!-- 简化大陆 -->
+      <path d="M268 210 Q280 200 295 208 Q305 214 300 224 Q290 228 278 222 Z" fill="#2a8a4a" opacity="0.7"/>
+      <path d="M312 232 Q326 226 338 236 Q344 246 334 252 Q320 254 312 246 Z" fill="#2a8a4a" opacity="0.7"/>
+      <path d="M282 258 Q296 254 306 262 Q310 272 298 276 Q286 274 282 266 Z" fill="#2a8a4a" opacity="0.6"/>
+      <text x="300" y="244" text-anchor="middle" font-size="13" fill="rgba(255,255,255,0.6)" font-weight="bold">地球</text>
+      <text x="300" y="312" text-anchor="middle" font-size="11" fill="rgba(255,255,255,0.5)">半径 6371km</text>
+
+      <!-- 空间站（沿轨道旋转 + 平滑变轨） -->
+      <g id="stationOrbit" style="transform-origin:300px 240px;animation:orbitSpin 9s linear infinite">
+        <g id="stationMover" style="transform: translate(400px, 240px); transition: transform 1.1s cubic-bezier(.34,1.56,.64,1)">
+          <use href="#station" x="-30" y="-10" width="60" height="20"/>
+        </g>
+      </g>
+    </svg>
+  </div>
+
+  <div class="formula-box">
+    <div class="fb-title" id="fbTitle">📝 算式过程</div>
+    <div id="formulaArea"></div>
+  </div>
+
+  <div class="ctrl">
+    <button class="btn btn-play" onclick="playCurrent()">▶ 播放动画</button>
+    <button class="btn btn-reset" onclick="resetStage()">🔄 重置</button>
+  </div>
+</div>
+
+<script>
+const DATA = { p1:358, p2:146, p3:487 };
+// 轨道半径换算：高度→像素半径。地球r=62，让358→100px, 504→172px
+const EARTH_R = 62;
+const MIN_R = 100; // 358km对应
+const PX_PER_KM = (172-100)/(504-358); // ≈0.493
+function radOf(h){ return MIN_R + (h-358)*PX_PER_KM; }
+// 358→100, 504→172, 487→163.5, 375→109.3, 375→109.3, 146差→72px
+
+const CX=300, CY=240;
+let currentQ=1, timers=[];
+
+function makeStars(){
+  const c=document.getElementById('stars');
+  for(let i=0;i<90;i++){const s=document.createElement('div');s.className='star';
+    const sz=Math.random()*3+1;
+    s.style.cssText=`width:${sz}px;height:${sz}px;left:${Math.random()*100}%;top:${Math.random()*100}%;animation-delay:${Math.random()*3}s`;
+    c.appendChild(s);}
+}
+function delay(fn,ms){timers.push(setTimeout(fn,ms));}
+function clearTimers(){timers.forEach(clearTimeout);timers=[];}
+function setNarr(i,t){document.querySelector('.n-icon').textContent=i;document.getElementById('narrText').innerHTML=t;}
+
+// 设置某条轨道显示
+function setOrbit(id, height, opacity=1){
+  const o=document.getElementById(id);
+  o.setAttribute('r', radOf(height));
+  o.style.strokeOpacity = opacity;
+}
+function hideOrbit(id){document.getElementById(id).style.strokeOpacity=0;}
+
+// 移动空间站到指定高度轨道（用 CSS transform 平滑变轨）
+function moveStation(height){
+  const r=radOf(height);
+  document.getElementById('stationMover').style.transform = `translate(${CX+r}px, ${CY}px)`;
+}
+
+// 在轨道旁标注【名称 + 高度】（双行标签）
+function addLabel(id, name, height, angle, color){
+  const r=radOf(height);
+  const rad=angle*Math.PI/180;
+  const x=CX+r*Math.cos(rad), y=CY+r*Math.sin(rad);
+  const lg=document.getElementById('labelGroup');
+  const old=document.getElementById('lbl-'+id); if(old) old.remove();
+  const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+  g.id='lbl-'+id;
+  g.style.opacity='0'; g.style.transition='opacity 0.5s';
+  const bw=92, bh=34;
+  const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+  rect.setAttribute('x',x-bw/2);rect.setAttribute('y',y-bh/2);
+  rect.setAttribute('width',bw);rect.setAttribute('height',bh);rect.setAttribute('rx',9);
+  rect.setAttribute('fill','rgba(0,0,0,0.65)');rect.setAttribute('stroke',color);rect.setAttribute('stroke-width',1.6);
+  // 名称行
+  const t1=document.createElementNS('http://www.w3.org/2000/svg','text');
+  t1.textContent=name;t1.setAttribute('font-size','11');t1.setAttribute('fill','#ccd');
+  t1.setAttribute('text-anchor','middle');t1.setAttribute('x',x);t1.setAttribute('y',y-3);
+  // 数值行
+  const t2=document.createElementNS('http://www.w3.org/2000/svg','text');
+  t2.textContent=height+' km';t2.setAttribute('font-size','15');t2.setAttribute('font-weight','bold');t2.setAttribute('fill',color);
+  t2.setAttribute('text-anchor','middle');t2.setAttribute('x',x);t2.setAttribute('y',y+13);
+  g.appendChild(rect);g.appendChild(t1);g.appendChild(t2);
+  lg.appendChild(g);
+  requestAnimationFrame(()=>g.style.opacity='1');
+}
+function removeLabel(id){const e=document.getElementById('lbl-'+id);if(e)e.remove();}
+function clearLabels(){document.getElementById('labelGroup').innerHTML='';}
+
+// 画两轨道间的【变化量标注】，带方向箭头和说明文字
+function addDiffMark(hLow, hHigh, label, color, direction){
+  const lg=document.getElementById('labelGroup');
+  const old=document.getElementById('diffMark'); if(old) old.remove();
+  const g=document.createElementNS('http://www.w3.org/2000/svg','g');
+  g.id='diffMark';
+  g.style.opacity='0'; g.style.transition='opacity 0.5s';
+  g.style.color=color; // 让 marker 的 currentColor 生效
+  const r1=radOf(hLow), r2=radOf(hHigh);
+  const x=CX, y1=CY-r1, y2=CY-r2;
+  const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+  line.setAttribute('x1',x);line.setAttribute('y1',y1);line.setAttribute('x2',x);line.setAttribute('y2',y2);
+  line.setAttribute('stroke',color);line.setAttribute('stroke-width',3);
+  line.setAttribute('marker-start','url(#arrowM)');line.setAttribute('marker-end','url(#arrowM)');
+  // 标注框（带方向符号）
+  const my=(y1+y2)/2;
+  const bw=80,bh=22;
+  const rect=document.createElementNS('http://www.w3.org/2000/svg','rect');
+  rect.setAttribute('x',x+6);rect.setAttribute('y',my-bh/2);
+  rect.setAttribute('width',bw);rect.setAttribute('height',bh);rect.setAttribute('rx',8);
+  rect.setAttribute('fill','rgba(0,0,0,0.7)');rect.setAttribute('stroke',color);rect.setAttribute('stroke-width',1.4);
+  const txt=document.createElementNS('http://www.w3.org/2000/svg','text');
+  const arrow = direction==='up'?'↑ ':direction==='down'?'↓ ':'';
+  txt.textContent=arrow+label;
+  txt.setAttribute('x',x+6+bw/2);txt.setAttribute('y',my+5);
+  txt.setAttribute('font-size','14');txt.setAttribute('font-weight','bold');txt.setAttribute('fill',color);
+  txt.setAttribute('text-anchor','middle');
+  g.appendChild(line);g.appendChild(rect);g.appendChild(txt);
+  lg.appendChild(g);
+  requestAnimationFrame(()=>g.style.opacity='1');
+}
+function removeDiffMark(){const e=document.getElementById('diffMark');if(e)e.remove();}
+
+function resetStage(){
+  clearTimers();
+  ['orbit1','orbit2','orbit3','orbit4'].forEach(hideOrbit);
+  clearLabels();removeDiffMark();
+  moveStation(DATA.p1);
+  document.getElementById('stationOrbit').style.opacity='0';
+  document.getElementById('formulaArea').innerHTML='';
+  setNarr('📣','选好题目，点 <b>▶ 播放动画</b>，看空间站怎么变轨道！');
+}
+
+function selectQ(n){
+  currentQ=n;
+  document.querySelectorAll('.qtab').forEach((t,i)=>t.classList.toggle('active',i===n-1));
+  resetStage();
+  const titles={1:'❶ 加法：358 ＋ 146 ＝ ？',2:'❷ 减法：487 − 358 ＝ ？',3:'❸ 先降后升，需要升多少？'};
+  document.getElementById('fbTitle').textContent='📝 '+titles[n];
+  showQuestion(n);
+}
+
+// 三道题的原题问题
+const QUESTIONS={
+  1:{tag:'❶ 第一题',body:'空间站先在<span class="kn">初始轨道 358 千米</span>飞行，又<span class="kn">上升了 146 千米</span>。现在空间站距离地面一共多少千米？'},
+  2:{tag:'❷ 第二题',body:'空间站到达<span class="kn">稳定巡航 487 千米</span>的轨道。它比<span class="kn">初始轨道 358 千米</span>高多少千米？'},
+  3:{tag:'❸ 第三题',body:'空间站先飞到阶段二总高度（358＋146）千米，再<span class="kn">下降 129 千米</span>，最后要到达<span class="kn">稳定巡航 487 千米</span>。还需要再上升多少千米？'}
+};
+function showQuestion(n){
+  const box=document.getElementById('questionBox');
+  const q=QUESTIONS[n];
+  document.getElementById('qTag').textContent=q.tag;
+  document.getElementById('qBody').innerHTML=q.body;
+  box.classList.remove('show');
+  // 触发重排后显示
+  void box.offsetWidth;
+  box.classList.add('show');
+}
+function hideQuestion(){
+  document.getElementById('questionBox').classList.remove('show');
+}
+
+// ===== 题目1：358+146=504 =====
+function playQ1(){
+  resetStage();
+  const so=document.getElementById('stationOrbit');
+  so.style.opacity='1';
+  so.style.animationDuration='7s';
+
+  // 步骤1：初始轨道358
+  setNarr('🛰️','第一步：空间站在<b>初始轨道 358 千米</b>绕地球飞行！');
+  delay(()=>{
+    setOrbit('orbit1',DATA.p1,1);
+    moveStation(DATA.p1);
+    addLabel('1','初始轨道',DATA.p1,-50,'#4facfe');
+  },300);
+
+  // 步骤2：上升146，轨道变到504
+  delay(()=>{
+    setNarr('⬆️','第二步：上升 <b>146 千米</b>，轨道变大！空间站飞到更远的轨道！');
+    setOrbit('orbit1',DATA.p1+DATA.p2,1);
+    document.getElementById('orbit1').setAttribute('stroke','#6cf');
+    moveStation(DATA.p1+DATA.p2);
+    // 保留初始轨道虚影做对比
+    setOrbit('orbit2',DATA.p1,0.35);
+    document.getElementById('orbit2').setAttribute('stroke','#4facfe');
+    addLabel('1','初始轨道',DATA.p1,-50,'#4facfe');
+    addLabel('2','新轨道',DATA.p1+DATA.p2,40,'#6cf');
+    addDiffMark(DATA.p1,DATA.p1+DATA.p2,'上升 146','rgba(247,147,201,0.95)','up');
+  },2000);
+
+  // 步骤3：合并说明
+  delay(()=>{
+    setNarr('✨','看！358 ＋ 146 ＝ <b>504 千米</b>，这就是新轨道高度！');
+  },3900);
+
+  delay(()=>showFormula1(),4600);
+}
+function showFormula1(){
+  const fa=document.getElementById('formulaArea');
+  fa.innerHTML=`<div class="fline" id="fl1">
+    <div class="fblock blue-b blue-t">358</div><span class="fop">＋</span>
+    <div class="fblock pink-b pink-t">146</div><span class="feq">＝</span>
+    <div class="fblock gold-b gold-t">504</div></div>
+    <div class="final-ans" id="fa1">✅ 答：新轨道高度是 504 千米！</div>`;
+  delay(()=>document.getElementById('fl1').classList.add('show'),100);
+  delay(()=>document.getElementById('fa1').classList.add('show'),700);
+}
+
+// ===== 题目2：487-358=129 =====
+function playQ2(){
+  resetStage();
+  const so=document.getElementById('stationOrbit');so.style.opacity='1';so.style.animationDuration='6s';
+
+  setNarr('✨','第一步：空间站飞到<b>稳定巡航 487 千米</b>的轨道！');
+  delay(()=>{
+    setOrbit('orbit3',DATA.p3,1);
+    moveStation(DATA.p3);
+    addLabel('3','稳定巡航',DATA.p3,-45,'#f7971e');
+  },300);
+
+  delay(()=>{
+    setNarr('🔍','第二步：和<b>初始轨道 358 千米</b>比一比，两个轨道差多远？');
+    setOrbit('orbit1',DATA.p1,0.85);
+    document.getElementById('orbit1').setAttribute('stroke','#4facfe');
+    addLabel('1','初始轨道',DATA.p1,45,'#4facfe');
+  },2000);
+
+  delay(()=>{
+    setNarr('💡','第三步：两个轨道之间的<b>差距就是 129 千米</b>！');
+    addDiffMark(DATA.p1,DATA.p3,'相差 129','#6cf','');
+  },3900);
+
+  delay(()=>showFormula2(),4800);
+}
+function showFormula2(){
+  const fa=document.getElementById('formulaArea');
+  fa.innerHTML=`<div class="fline" id="fl2">
+    <div class="fblock orange-b orange-t">487</div><span class="fop">−</span>
+    <div class="fblock blue-b blue-t">358</div><span class="feq">＝</span>
+    <div class="fblock gold-b gold-t">129</div></div>
+    <div class="final-ans" id="fa2">✅ 答：稳定巡航比初始轨道高 129 千米！</div>`;
+  delay(()=>document.getElementById('fl2').classList.add('show'),100);
+  delay(()=>document.getElementById('fa2').classList.add('show'),700);
+}
+
+// ===== 题目3：504→375→487，需升112 =====
+function playQ3(){
+  resetStage();
+  const so=document.getElementById('stationOrbit');so.style.opacity='1';so.style.animationDuration='6s';
+  const total504=DATA.p1+DATA.p2, drop=129, after=375, rise=112;
+
+  setNarr('🛰️','第一步：空间站在阶段二总高度 <b>504 千米</b>轨道飞行！');
+  delay(()=>{
+    setOrbit('orbit4',total504,1);
+    document.getElementById('orbit4').setAttribute('stroke','#6cf');
+    moveStation(total504);
+    addLabel('4','阶段二高度',total504,-50,'#6cf');
+  },300);
+
+  delay(()=>{
+    setNarr('⬇️','第二步：先<b>下降 129 千米</b>，空间站飞到更近的轨道（375 千米）！');
+    setOrbit('orbit4',after,1);
+    moveStation(after);
+    // 保留504轨道虚影
+    setOrbit('orbit2',total504,0.3);
+    document.getElementById('orbit2').setAttribute('stroke','#6cf');
+    addLabel('4','下降后',after,-50,'#6cf');
+    addDiffMark(after,total504,'下降 129','rgba(247,147,201,0.95)','down');
+  },2100);
+
+  delay(()=>{
+    setNarr('⬆️','第三步：再<b>上升</b>到稳定巡航 487 千米，轨道又变远！');
+    setOrbit('orbit4',DATA.p3,1);
+    document.getElementById('orbit4').setAttribute('stroke','#f7971e');
+    moveStation(DATA.p3);
+    removeDiffMark();
+    addLabel('4','稳定巡航',DATA.p3,-50,'#f7971e');
+    addDiffMark(after,DATA.p3,'上升 112','#6cf','up');
+  },4000);
+
+  delay(()=>{
+    setNarr('💡','从 375 到 487，需要上升 <b>112 千米</b>！');
+  },5700);
+
+  delay(()=>showFormula3(),6500);
+}
+function showFormula3(){
+  const fa=document.getElementById('formulaArea');
+  fa.innerHTML=`
+    <div class="fline" id="fl3a"><div class="fblock gold-b gold-t">358＋146</div><span class="feq">＝</span><div class="fblock gold-b gold-t">504</div></div>
+    <div class="fline" id="fl3b"><div class="fblock gold-b gold-t">504</div><span class="fop">−</span><div class="fblock pink-b pink-t">129</div><span class="feq">＝</span><div class="fblock blue-b blue-t">375</div><span class="fop" style="margin-left:10px;font-size:15px">↓下降后</span></div>
+    <div class="fline" id="fl3c"><div class="fblock orange-b orange-t">487</div><span class="fop">−</span><div class="fblock blue-b blue-t">375</div><span class="feq">＝</span><div class="fblock gold-b gold-t">112</div></div>
+    <div class="final-ans" id="fa3">✅ 答：需要再上升 112 千米！</div>`;
+  delay(()=>document.getElementById('fl3a').classList.add('show'),100);
+  delay(()=>document.getElementById('fl3b').classList.add('show'),700);
+  delay(()=>document.getElementById('fl3c').classList.add('show'),1300);
+  delay(()=>document.getElementById('fa3').classList.add('show'),1900);
+}
+
+function playCurrent(){
+  if(currentQ===1)playQ1();else if(currentQ===2)playQ2();else playQ3();
+}
+
+makeStars();selectQ(1);
+</script>
+</body>
+</html>
